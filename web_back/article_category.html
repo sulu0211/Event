@@ -29,7 +29,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
+                    <!-- <tr>
                         <td>未分类</td>
                         <td>uncategorized</td>
                         <td class="text-center">
@@ -92,7 +92,7 @@
                   >删除</a
                 >
               </td>
-            </tr>
+            </tr> -->
           </tbody>
           <tfoot>
             <tr>
@@ -149,6 +149,10 @@
             <button type="button" class="btn btn-primary" id="model_add">
               新增
             </button>
+             <!-- 设置一个新的按钮，用来进行编辑操作 -->
+            <button type="button" class="btn btn-primary hide" id="model_edit">
+              编辑
+              </button>
           </div>
         </div>
       </div>
@@ -188,61 +192,118 @@
 {{/each}}
 </script>
 <script>
+  /*
+        功能分析：
+          1 根据接口响应的数据，渲染分类信息表格
+            - 设置模板，生成结构
+          2 新增分类
+            - 点击新增按钮 #model_add （注意名称，结构中不是modal）
+            - 检测内容是否填写完整
+              - .cate_name  .cate_slug
+          3 删除分类
+          4 编辑分类
+         
+      */
     // 1 请求服务端数据，获取分类信息 -->
-    $.get({
-        url: 'http://localhost:8000/admin/category_search',
-        success: function(res) {
-            if (res.code === 200) {
-                console.log(res);
-                // 通过模板生成结构，并设置给tbody标签
-                $('tbody').html(template('category', res.data));
-            }
+     $.get({
+       url:'http://localhost:8000/admin/category_search',
+       success:function(res){
+         
+         if(res.code === 200){
+          // console.log(res);
+           //通过模板生成结构，并设置给tbody标签
+           $('tbody').html(template('category',res.data))
+         }
+       }
+     });
+    //2.设置新增分类功能
+    $('#model_add').on('click',function(){
+      //2.1检测内容是否为空
+      var nameVal = $('.cate_name').val();
+      var slugVal = $('.cate_slug').val();
+      if(nameVal === ''|| slugVal === ''){
+        alert('不好意思，请完整填写');
+        return;
+      }
+      //2.2将信息提交
+      $.post({
+        url:'http://localhost:8000/admin/category_add',
+        data:{
+          name:nameVal,
+          slug:slugVal,
+        },
+        success:function(res){
+          // console.log(res);
+          if(res.code ===200){
+            //刷新页面
+            location.reload();
+          }
         }
+      })
     });
-    //2.设置新增功能
-     $('#model_add').on('click', function() {
-        //2.1检测内容是否为空
-        var nameVal = $('.cate_name').val();
-        var slugVal = $('.cate_slug').val();
-        if (nameVal === '' || slugVal === '') {
-            alert('不好意思，请完整填写表单');
-            return;
-        }
-        //2.2将数据发送给服务端
-        $.ajax({
-            type: 'post',
-            url: 'http://localhost:8000/admin/category_add',
-            data: {
-                name: nameVal,
-                slug: slugVal
-            },
-        success: function(res) {
-             if (res.code === 200) {
-                 location.reload();
-            }
-        }
-    })
+
+ //3设置删除功能 使用事件委托
+ $('tbody').on('click','.btn-danger',function(){
+   //3.1获取data-id属性
+   var id = $(this).data('id');
+   //3.2获取tr
+   var tr = $(this).parents('tr');
+   $.ajax({
+     type:'post',
+     url:'http://localhost:8000/admin/category_delete',
+     data:{
+       id:id
+     },
+     success:function(res){
+      //  console.log(res);
+      if (res.code === 200) {
+              tr.remove();
+      }
+     }
+   })
  })
-
-// 4 设置编辑功能
-$('tbody').on('click', '.btn-info', function() {
-      // 4.1 获取data-id属性
-    var id = $(this).data('id');
-
-    // 4.2 将当前数据内容填写到对应的输入框中
+// // 4 设置编辑功能
+var id;
+  $('tbody').on('click','.btn-info',function(){
+    //4.1获取data-idshuxing
+     id=$(this).data('id');
+    //4.2将当前数据内容填写到对应的输入框中
     $('.cate_name').val($(this).parents('tr').children('td').eq(0).text());
     $('.cate_slug').val($(this).parents('tr').children('td').eq(1).text());
-
-    // 4.3 需要将设置的编辑按钮显示，将新增按钮隐藏
+    //4.3需要将设置的编辑按钮显示，将新增按钮隐藏
     $('#model_add').addClass('hide');
-    $('#modal_edit').removeClass('hide');
-});
+    $('#model_edit').removeClass('hide');
+  });
+    // 因为前面修改了结构，需要给.btn-add设置一个显示隐藏的切换
+    $('.btn-add').on('click', function () {
+        $('#model_add').removeClass('hide');
+        $('#modal_edit').addClass('hide');
+      });
 
-// 因为前面修改了结构，需要给.btn-add设置一个显示隐藏的切换
-$('.btn-add').on('click', function() {
-    $('#model_add').removeClass('hide');
-    $('#modal_edit').addClass('hide');
-});
+    //5设置编辑按钮的操作
+    $('#modal_edit').on('click',function(){
+      //检测是否完整填写表单
+      if($('.cate_name').val() === ''|| $('.cate_slug').val() === ''){
+        alert('请完整填写表单');
+        return;
+      }
+
+      // 发送请求，进行编辑操作
+      $.post({
+        url:'http://localhost:8000/admin/category_edit',
+        data:{
+          name:$('.cate_name').val(),
+          slug:$('.cate_slug').val(),
+          id:id,
+        },
+        success:function(res){
+          //// 检测修改是否成功
+          if(res.code === 200){
+            location.reload();
+          }
+        }
+      })
+    })
 </script>
 </body>
 
