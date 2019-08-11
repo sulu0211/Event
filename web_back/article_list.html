@@ -58,7 +58,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr>
+            <!-- <tr>
               <td>王积千造统最头</td>
               <td>杰克</td>
               <td>奇趣事</td>
@@ -256,7 +256,7 @@
                   >删除</a
                 >
               </td>
-            </tr>
+            </tr> -->
           </tbody>
         </table>
 
@@ -296,26 +296,15 @@
     </script>
     <!-- 模板引擎导入 -->
     <script src="./js/template-web.js"></script>
-    <!-- 定义模板 选项 -->
-    <script type="text/template" id="cate">
-      {{each data v}}
-          <option value="{{v.id}}">{{v.name}}</option>
-      {{/each}}
-    </script>
     <!-- 定义模板 文章 -->
     <script type="text/html" id="article">
       {{each $data }}
           <tr>
-
                 <td>{{$value.title}}</td>
                 <td>{{$value.author}}</td>
                 <td>{{$value.type}}</td>
                 <td class="text-center">{{$value.date}}</td>
-
-
                 <td class="text-center">{{$value.state}}</td>
-
-
                 <td class="text-center">
                     <a href="article_edit.html" class="btn btn-default btn-xs">编辑</a>
                     <a href="javascript:deleteTr( 1005 );" class="btn btn-danger btn-xs">删除</a>
@@ -323,11 +312,43 @@
             </tr>
         {{/each}}
     </script>
+    <!-- 设置分类下拉菜单模板 -->
+    <script type="text/template" id="category">
+      {{each $data}}
+      <option value="{{$value.id}}">{{$value.name}}</option>
+      {{/each}}
+    </script>
+
     <!-- 自己的js -->
    <script>
-
-     var currentPage = 1;
+     /*
+        - 1 请求服务端信息进行基本结构创建
+          2 设置分页功能
+          3 筛选操作
+      */
+     var currentPage = 1;//默认显示第一页
+     var totalPage; //可以不设置
+     //进行
      getArtical();
+
+    //筛选功能
+    //-获取分类信息设置分类下拉菜单结构
+     $.get({
+       url:'http://localhost:8000/admin/category_search',
+       success:function(res){
+         if(res.code === 200){
+           $('#selCategory').append(template('category',res.data))
+         }
+       }
+     })
+
+     //    - 给筛选按钮设置事件，调用getArtical获取最新数据
+     $('#btnSearch').on('click',function(){
+       //将旧的分页结构销毁
+       $('.pagination').twbsPagination('destroy');
+       // 再创建新的结构即可
+       getArtical();
+     })
      function getArtical(){
          //功能分析：1.请求服务端信息进行基本结构创建
      //2.设置分页功能     3.筛选操作
@@ -347,9 +368,11 @@
            //根据数据通过模板设置
            $('tbody').html(template('article',res.data))
            //设置分页功能
+           //-将当期的最新页数设置给totalPage
+           totalPage = res.totalPage;
            $('.pagination').twbsPagination({
              //总页数
-             totalPages : res.totalPage,
+             totalPages :totalPage,
              //每次显示多少个页码
              visiblPages : 5,
              //设置当前页
@@ -361,7 +384,7 @@
             prev:'上一页',
              //点击某个页码时进行操作
              onPageClick:function(event,page){
-               page=currentPage;
+              currentPage = page;
               getArtical();
             }
            
